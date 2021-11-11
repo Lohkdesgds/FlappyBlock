@@ -1,9 +1,38 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <Filter Include="CODE">
+      <UniqueIdentifier>{71613b71-d61b-406b-b17e-f1fd84895c2a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RESOURCES">
+      <UniqueIdentifier>{0c65a4ed-de07-45dd-954e-0a3fc12f1dad}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>CODE</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>RESOURCES</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\Resource\resource.png">
+      <Filter>RESOURCES</Filter>
+    </Image>
+    <Image Include="png1.png" />
+    <Image Include="..\Resource\icon_src.ico">
+      <Filter>RESOURCES</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FlappyBlock.rc">
+      <Filter>RESOURCES</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

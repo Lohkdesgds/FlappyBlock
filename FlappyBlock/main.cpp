@@ -2,6 +2,8 @@
 #include <Lunaris/graphics.h>
 #include <Lunaris/events.h>
 #include <Lunaris/audio.h>
+#include "resource.h"
+#include <allegro5/allegro_native_dialog.h>
 
 using namespace Lunaris;
 
@@ -14,18 +16,18 @@ constexpr float dist_shadow = 0.01f;
 const color around_color = color(0,0,0);
 const color bg_color = color(0.0f,0.0f,0.0f,0.6f);
 
-#define myassert(X, ERRMSG) if (!X) { cout << console::color::RED << ERRMSG; lock_console(); }
+#define myassert(X, ERRMSG) if (!X) { cout << console::color::RED << ERRMSG; lock_console(ERRMSG); }
 #define logging(A, B) { cout << console::color::BLUE << "[" << A << "] " << B;}
 
-void lock_console();
+void lock_console(const std::string&);
 
 int main()
 {
 	logging("MAIN", "Starting...");
 
-	file fp;
 
 	auto main_texture = make_hybrid<texture>();
+	bool just_die = false;
 
 	hybrid_memory<texture> bird_textures[3]	   = { make_hybrid<texture>(),make_hybrid<texture>(),make_hybrid<texture>() };
 	hybrid_memory<texture> pipe_up_texture     = make_hybrid<texture>();
@@ -69,22 +71,27 @@ int main()
 			.set_display_mode(display_options().set_width(576).set_height(1024))
 		), "Failed to create display!");
 
+	disp.set_icon_from_icon_resource(IDI_ICON1);
+
 
 	const auto speed_on_time_f = [&] {
 		return speed_accel_screen + static_cast<float>(cos(al_get_time())) * 0.001f;
 	};
 
-	myassert(fp.open_temp("flappy_block_XXXX.png", "wb+"), "Could not create temporary file!");
+	//myassert(fp.open("flappy_block_XXXX.png"), "Could not create temporary file!");
+	//
+	//logging("MAIN", "Downloading resources...");
+	//{
+	//	downloader down;
+	//	myassert(down.get_store(texture_url, [&](const char* buf, const size_t len) { fp.write(buf, len); }), "Could not download texture file!");
+	//	myassert(fp.flush(), "Could not flush temporary file");
+	//}
 
-	logging("MAIN", "Downloading resources...");
-	{
-		downloader down;
-		myassert(down.get_store(texture_url, [&](const char* buf, const size_t len) { fp.write(buf, len); }), "Could not download texture file!");
-		myassert(fp.flush(), "Could not flush temporary file");
-	}
+	auto fp = make_hybrid_derived<file, memfile>(get_executable_resource_as_memfile(IDB_PNG1, (WinString)L"PNG"));
+	fp->flush();
 
 	logging("MAIN", "Loading texture...");
-	myassert(main_texture->load(fp.get_current_path()), "Failed to load texture");
+	myassert(main_texture->load(fp), "Failed to load texture");
 
 	*background_texture  = main_texture->create_sub(0, 0, 144, 256);
 	*background_texture2 = main_texture->create_sub(146, 0, 144, 256);
@@ -92,8 +99,8 @@ int main()
 	*bird_textures[0]    = main_texture->create_sub(3, 489, 17, 17);
 	*bird_textures[1]    = main_texture->create_sub(31, 489, 17, 17);
 	*bird_textures[2]    = main_texture->create_sub(59, 489, 17, 17);
-	*pipe_up_texture      = main_texture->create_sub(56, 323, 26, 160); // up to down
-	*pipe_dw_texture    = main_texture->create_sub(84, 323, 26, 160); // down to up
+	*pipe_up_texture     = main_texture->create_sub(56, 323, 26, 160); // up to down
+	*pipe_dw_texture     = main_texture->create_sub(84, 323, 26, 160); // down to up
 
 	myassert(main_font->create_builtin_font(), "Could not create font!");
 
@@ -123,7 +130,7 @@ int main()
 			camera.apply();
 			break;
 		case ALLEGRO_EVENT_DISPLAY_CLOSE:
-			disp.destroy();
+			just_die = true;
 			break;
 		default:
 			cout << console::color::AQUA << "EV: " << ev.type;
@@ -278,7 +285,7 @@ int main()
 		{
 			disp.toggle_flag(ALLEGRO_FULLSCREEN_WINDOW);
 			reapply_prop = true;
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		break;
 		}
@@ -330,8 +337,10 @@ int main()
 	fps_counter.set<float>(enum_sprite_float_e::POS_X, -0.989f);
 	fps_counter.set<float>(enum_sprite_float_e::POS_Y, -0.989f);
 	fps_counter.set<float>(enum_sprite_float_e::SCALE_G, 0.06f);
-	fps_counter.set<float>(enum_sprite_float_e::SCALE_Y, 0.7f);
+	fps_counter.set<float>(enum_sprite_float_e::SCALE_Y, 1.2f);
+	fps_counter.set<float>(enum_sprite_float_e::THINK_ELASTIC_SPEED_PROP, 0.0f);
 	fps_counter.set<bool>(enum_sprite_boolean_e::DRAW_TRANSFORM_COORDS_KEEP_SCALE, true);
+	fps_counter.set<bool>(enum_sprite_boolean_e::DRAW_TRANSFORM_NO_EFFECT_ON_SCALE, true);
 	fps_counter.font_set(main_font);
 	for (auto& i : fourcorners) fps_counter.shadow_insert(i);
 
@@ -396,7 +405,7 @@ int main()
 	auto nowww = std::chrono::system_clock::now() + std::chrono::milliseconds(333);
 	size_t fps_var = 0;
 
-	while (!disp.empty())
+	while (!just_die)
 	{
 		if (reapply_prop) {
 			reapply_prop = false;
@@ -432,16 +441,22 @@ int main()
 		}
 		else ++fps_var;
 	}
+	disp.destroy();
 
 	logging("MAIN", "Closed the app.");
 	return 0;
 }
 
 
-void lock_console()
+void lock_console(const std::string& err)
 {
+#ifdef _DEBUG
 	while (1) {
 		std::string str;
 		std::getline(std::cin, str);
 	}
+#else
+	al_show_native_message_box(nullptr, "ERROR!", "There was an error!", err.c_str(), nullptr, ALLEGRO_MESSAGEBOX_ERROR);
+	std::terminate();
+#endif
 }

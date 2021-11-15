@@ -29,7 +29,7 @@ int main()
 
 	auto main_texture = make_hybrid<texture>();
 	bool just_die = false;
-	std::atomic<int> display_speeds_toggle = 11;
+	std::atomic<size_t> display_speeds_toggle = 11;
 
 	hybrid_memory<texture> bird_textures[3]	   = { make_hybrid<texture>(),make_hybrid<texture>(),make_hybrid<texture>() };
 	hybrid_memory<texture> pipe_up_texture     = make_hybrid<texture>();
@@ -294,12 +294,6 @@ int main()
 			break;
 		case ALLEGRO_KEY_F11:
 		{
-			if (disp.get_flags() & ALLEGRO_FULLSCREEN_WINDOW) {
-				disp.set_fps_limit(display_speeds[display_speeds_toggle]);
-			}
-			else {
-				disp.set_fps_limit(0);
-			}
 			disp.toggle_flag(ALLEGRO_FULLSCREEN_WINDOW);
 			//reapply_prop = true;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -307,14 +301,9 @@ int main()
 		break;
 		case ALLEGRO_KEY_X:
 		{
-			if (!(disp.get_flags() & ALLEGRO_FULLSCREEN_WINDOW)) {
-				if (++display_speeds_toggle >= std::size(display_speeds)) display_speeds_toggle = 0;
-				cout << "Toggled window speed (X) to " << display_speeds[display_speeds_toggle];
-				disp.set_fps_limit(display_speeds[display_speeds_toggle]);
-			}
-			else {
-				cout << "Toggling speed not enabled in fullscreen.";
-			}
+			if (++display_speeds_toggle >= std::size(display_speeds)) display_speeds_toggle = 0;
+			cout << "Toggled window speed (X) to " << display_speeds[display_speeds_toggle];
+			disp.set_fps_limit(display_speeds[display_speeds_toggle]);
 		}
 		break;
 		}

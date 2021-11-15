@@ -15,6 +15,7 @@ constexpr size_t num_of_pipes = 3;
 constexpr float dist_shadow = 0.01f;
 const color around_color = color(0,0,0);
 const color bg_color = color(0.0f,0.0f,0.0f,0.6f);
+const int display_speeds[] = { 0, 15, 24, 30, 45, 60, 90, 120, 144, 165, 180, 240, 360, 500, 1000, 2000 };
 
 #define myassert(X, ERRMSG) if (!X) { cout << console::color::RED << ERRMSG; lock_console(ERRMSG); }
 #define logging(A, B) { cout << console::color::BLUE << "[" << A << "] " << B;}
@@ -28,6 +29,7 @@ int main()
 
 	auto main_texture = make_hybrid<texture>();
 	bool just_die = false;
+	std::atomic<int> display_speeds_toggle = 11;
 
 	hybrid_memory<texture> bird_textures[3]	   = { make_hybrid<texture>(),make_hybrid<texture>(),make_hybrid<texture>() };
 	hybrid_memory<texture> pipe_up_texture     = make_hybrid<texture>();
@@ -50,6 +52,7 @@ int main()
 	text_shadow fourcorners[4];
 
 	display disp;
+	display_event_handler dispev(disp);
 	transform camera;
 	keys kbkeys;
 	mouse mousse(disp);
@@ -67,8 +70,10 @@ int main()
 			.set_window_title("FlappyBlock | Lunaris Edition")
 			.set_use_basic_internal_event_system(true)
 			.set_fullscreen(false)
-			.set_extra_flags(ALLEGRO_RESIZABLE|ALLEGRO_DIRECT3D_INTERNAL)
+			.set_extra_flags(ALLEGRO_RESIZABLE|ALLEGRO_OPENGL)//ALLEGRO_DIRECT3D_INTERNAL)
 			.set_display_mode(display_options().set_width(576).set_height(1024))
+			.set_economy_framerate_limit(30)
+			.set_framerate_limit(display_speeds[display_speeds_toggle])
 		), "Failed to create display!");
 
 	disp.set_icon_from_icon_resource(IDI_ICON1);
@@ -123,17 +128,23 @@ int main()
 	camera.build_classic_fixed_proportion(disp.get_width(), disp.get_height(), 144.0f / 256.0f, screen_zoom_debug);
 	camera.apply();
 
-	disp.hook_event_handler([&](const ALLEGRO_EVENT& ev) {
-		switch (ev.type) {
+	dispev.hook_event_handler([&](display_event& ev) {
+		switch (ev.get_type()) {
 		case ALLEGRO_EVENT_DISPLAY_RESIZE:
-			camera.build_classic_fixed_proportion(disp.get_width(), disp.get_height(), 144.0f / 256.0f, screen_zoom_debug);
-			camera.apply();
+		case static_cast<int>(display::custom_events::DISPLAY_FLAG_TOGGLE):
+			ev->acknowledge_resize();
+			reapply_prop = true;
+			ev.post_task([&dsp = ev.get_display(), &camera]{
+				camera.build_classic_fixed_proportion(dsp.get_width(), dsp.get_height(), 144.0f / 256.0f, screen_zoom_debug);
+				camera.apply();
+				return true;
+			});
 			break;
 		case ALLEGRO_EVENT_DISPLAY_CLOSE:
 			just_die = true;
 			break;
 		default:
-			cout << console::color::AQUA << "EV: " << ev.type;
+			cout << console::color::AQUA << "EV: " << ev.get_event().type;
 		}
 	});
 
@@ -283,9 +294,27 @@ int main()
 			break;
 		case ALLEGRO_KEY_F11:
 		{
+			if (disp.get_flags() & ALLEGRO_FULLSCREEN_WINDOW) {
+				disp.set_fps_limit(display_speeds[display_speeds_toggle]);
+			}
+			else {
+				disp.set_fps_limit(0);
+			}
 			disp.toggle_flag(ALLEGRO_FULLSCREEN_WINDOW);
-			reapply_prop = true;
+			//reapply_prop = true;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+		break;
+		case ALLEGRO_KEY_X:
+		{
+			if (!(disp.get_flags() & ALLEGRO_FULLSCREEN_WINDOW)) {
+				if (++display_speeds_toggle >= std::size(display_speeds)) display_speeds_toggle = 0;
+				cout << "Toggled window speed (X) to " << display_speeds[display_speeds_toggle];
+				disp.set_fps_limit(display_speeds[display_speeds_toggle]);
+			}
+			else {
+				cout << "Toggling speed not enabled in fullscreen.";
+			}
 		}
 		break;
 		}
@@ -326,19 +355,21 @@ int main()
 
 	for(auto& i : fourcorners) i.clr = { 0,0,0 };
 	fourcorners[0].offset_x =  dist_shadow;
-	fourcorners[0].offset_y =  3.0f * dist_shadow;
+	fourcorners[0].offset_y =  6.0f * dist_shadow;
 	fourcorners[1].offset_x = -dist_shadow;
-	fourcorners[1].offset_y =  3.0f * dist_shadow;
+	fourcorners[1].offset_y =  6.0f * dist_shadow;
 	fourcorners[2].offset_x =  dist_shadow;
-	fourcorners[2].offset_y = -3.0f * dist_shadow;
+	fourcorners[2].offset_y = -6.0f * dist_shadow;
 	fourcorners[3].offset_x = -dist_shadow;
-	fourcorners[3].offset_y = -3.0f * dist_shadow;
+	fourcorners[3].offset_y = -6.0f * dist_shadow;
 
 	fps_counter.set<float>(enum_sprite_float_e::POS_X, -0.989f);
 	fps_counter.set<float>(enum_sprite_float_e::POS_Y, -0.989f);
-	fps_counter.set<float>(enum_sprite_float_e::SCALE_G, 0.06f);
+	fps_counter.set<float>(enum_sprite_float_e::SCALE_G, 0.08f);
 	fps_counter.set<float>(enum_sprite_float_e::SCALE_Y, 1.2f);
 	fps_counter.set<float>(enum_sprite_float_e::THINK_ELASTIC_SPEED_PROP, 0.0f);
+	fps_counter.set<float>(enum_text_float_e::DRAW_UPDATES_PER_SEC, 0.0f); // no need, little text, no real impact
+	//fps_counter.set<float>(enum_text_float_e::DRAW_RESOLUTION, 0.5f);
 	fps_counter.set<bool>(enum_sprite_boolean_e::DRAW_TRANSFORM_COORDS_KEEP_SCALE, true);
 	fps_counter.set<bool>(enum_sprite_boolean_e::DRAW_TRANSFORM_NO_EFFECT_ON_SCALE, true);
 	fps_counter.font_set(main_font);
@@ -373,7 +404,7 @@ int main()
 		//k[1].set<bool>(enum_sprite_boolean_e::DRAW_DRAW_BOX, true);
 	}
 	
-	fps_counter.set<safe_data<std::string>>(enum_text_safe_string_e::STRING, std::string("FPS: ..."));
+	fps_counter.set<safe_data<std::string>>(enum_text_safe_string_e::STRING, std::string("POINTS: ..."));
 
 	for (auto& i : limits) collision_matrix.push_back(i);
 	for (auto& i : pipes_col_only) { for (auto& j : i) collision_matrix.push_back(j); }
@@ -403,15 +434,17 @@ int main()
 	logging("MAIN", "Started.");
 
 	auto nowww = std::chrono::system_clock::now() + std::chrono::milliseconds(333);
-	size_t fps_var = 0;
+	//size_t fps_var = 0;
+
+	disp.set_as_target();
 
 	while (!just_die)
 	{
-		if (reapply_prop) {
-			reapply_prop = false;
-			camera.build_classic_fixed_proportion(disp.get_width(), disp.get_height(), 144.0f / 256.0f, screen_zoom_debug);
-			camera.apply();
-		}
+		//if (reapply_prop) {
+		//	reapply_prop = false;
+		//	camera.build_classic_fixed_proportion(disp.get_width(), disp.get_height(), 144.0f / 256.0f, screen_zoom_debug);
+		//	camera.apply();
+		//}
 
 		bg_color.clear_to_this();
 
@@ -436,10 +469,10 @@ int main()
 
 		if (std::chrono::system_clock::now() > nowww) {
 			nowww = std::chrono::system_clock::now() + std::chrono::milliseconds(333);
-			fps_counter.set<safe_data<std::string>>(enum_text_safe_string_e::STRING, ("FPS: " + std::to_string(fps_var * 3) + "\nPOINTS: " + std::to_string(points)));
-			fps_var = 0;
+			fps_counter.set<safe_data<std::string>>(enum_text_safe_string_e::STRING, /*("FPS: " + std::to_string(fps_var * 3) +*/ "POINTS: " + std::to_string(points));
+			//fps_var = 0;
 		}
-		else ++fps_var;
+		//else ++fps_var;
 	}
 	disp.destroy();
 

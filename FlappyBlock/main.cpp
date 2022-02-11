@@ -26,7 +26,6 @@ int main()
 {
 	logging("MAIN", "Starting...");
 
-
 	auto main_texture = make_hybrid<texture>();
 	bool just_die = false;
 	std::atomic<size_t> display_speeds_toggle = 11;
@@ -47,7 +46,8 @@ int main()
 	size_t index_ahead = 0, points = 0;
 	text fps_counter;
 
-	std::vector<collisionable> collision_matrix;
+	//std::vector<collisionable_sprite> collision_matrix;
+	collisionable_manager collision_matrix2;
 
 	text_shadow fourcorners[4];
 
@@ -70,7 +70,7 @@ int main()
 			.set_window_title("FlappyBlock | Lunaris Edition")
 			.set_use_basic_internal_event_system(true)
 			.set_fullscreen(false)
-			.set_extra_flags(ALLEGRO_RESIZABLE|ALLEGRO_OPENGL)//ALLEGRO_DIRECT3D_INTERNAL)
+			.set_extra_flags(ALLEGRO_RESIZABLE|ALLEGRO_DIRECT3D_INTERNAL)//ALLEGRO_OPENGL)
 			.set_display_mode(display_options().set_width(576).set_height(1024))
 			.set_economy_framerate_limit(30)
 			.set_framerate_limit(display_speeds[display_speeds_toggle])
@@ -150,6 +150,10 @@ int main()
 
 	movement.task_async([&] {
 
+		const float limits_val = 0.16f;
+		const float offset_fix = 0.17f;
+		const float limitoff_fix = -0.14f;
+
 		anti_doubleclick = false;
 
 		if (!is_running) {
@@ -162,12 +166,8 @@ int main()
 			bird_block.set<double>(enum_block_double_e::DRAW_FRAMES_PER_SECOND, 4.0);
 		}
 		else {
-			bird_block.think();
-			foreground_block.think();
-
-			const float limits_val = 0.16f;
-			const float offset_fix = 0.17f;
-			const float limitoff_fix = -0.14f;
+			//bird_block.think();
+			//foreground_block.think();
 
 			float ff = 12.0f * bird_block.get<float>(enum_sprite_float_e::RO_THINK_SPEED_Y) - 1.2f;
 			if (ff < -limits_val * static_cast<float>(ALLEGRO_PI)) ff = -limits_val * static_cast<float>(ALLEGRO_PI);
@@ -180,30 +180,17 @@ int main()
 			if (bird_block.get<float>(enum_sprite_float_e::POS_Y) >= 1.0f) bird_block.set<float>(enum_sprite_float_e::POS_Y, 1.0f);
 			if (bird_block.get<float>(enum_sprite_float_e::POS_Y) <= -1.0f) bird_block.set<float>(enum_sprite_float_e::POS_Y, -1.0f);
 
-			foreground_block.set<float>(enum_sprite_float_e::ACCEL_X, speed_on_time_f());
-			if (float thus = foreground_block.get<float>(enum_sprite_float_e::POS_X); thus <= limitoff_fix) {
-				auto diff = foreground_block.get<float>(enum_sprite_float_e::RO_DRAW_PROJ_POS_X) - foreground_block.get<float>(enum_sprite_float_e::POS_X);
-				foreground_block.set<float>(enum_sprite_float_e::POS_X, thus + offset_fix);
-				foreground_block.set<float>(enum_sprite_float_e::RO_DRAW_PROJ_POS_X, thus + offset_fix + diff);
-			}
-
-			for (auto& k : limits) k.think();
-
-			for (auto& i : pipes) {
-				for (auto& k : i) {
-					k.think();
-				}
-			}
-			for (auto& i : pipes_col_only) {
-				for (auto& k : i) {
-					k.think();
-				}
-			}
-
 			if (float& curr = pipes[index_ahead][0].get<float>(enum_sprite_float_e::POS_X); curr < 0.0f) {
 				index_ahead = (index_ahead + 1) % num_of_pipes;
 				++points;
 			}
+		}
+
+		foreground_block.set<float>(enum_sprite_float_e::ACCEL_X, is_running ? speed_on_time_f() : 0.0f);
+		if (float thus = foreground_block.get<float>(enum_sprite_float_e::POS_X); thus <= limitoff_fix) {
+			auto diff = foreground_block.get<float>(enum_sprite_float_e::RO_DRAW_PROJ_POS_X) - foreground_block.get<float>(enum_sprite_float_e::POS_X);
+			foreground_block.set<float>(enum_sprite_float_e::POS_X, thus + offset_fix);
+			foreground_block.set<float>(enum_sprite_float_e::RO_DRAW_PROJ_POS_X, thus + offset_fix + diff);
 		}
 
 		background_block.set<size_t>(enum_block_sizet_e::RO_DRAW_FRAME, is_running ? 0 : 1);
@@ -274,8 +261,8 @@ int main()
 
 				i2[0].set<float>(enum_sprite_float_e::POS_X, (off + 1) * dist_between_pipes);
 				i2[1].set<float>(enum_sprite_float_e::POS_X, (off + 1) * dist_between_pipes);
-				i2[0].set<float>(enum_sprite_float_e::POS_Y, offy - 1.13f);
-				i2[1].set<float>(enum_sprite_float_e::POS_Y, offy + 1.13f);
+				i2[0].set<float>(enum_sprite_float_e::POS_Y, offy - 1.17f);
+				i2[1].set<float>(enum_sprite_float_e::POS_Y, offy + 1.17f);
 			}
 			points = 0;
 		}
@@ -395,29 +382,29 @@ int main()
 	
 	fps_counter.set<safe_data<std::string>>(enum_text_safe_string_e::STRING, std::string("POINTS: ..."));
 
-	for (auto& i : limits) collision_matrix.push_back(i);
-	for (auto& i : pipes_col_only) { for (auto& j : i) collision_matrix.push_back(j); }
-	collision_matrix.push_back(foreground_block);
-	{
-		collisionable col(bird_block);
-		col.set_work([&](const collisionable::result res, sprite& src) {
-			if (res.dir_to != 0) {
-				if (is_running) {
-					is_running = false;
-					index_ahead = 0;
-				}
+	for (auto& i : limits) collision_matrix2.push_back(i, true);
+	for (auto& i : pipes_col_only) { for (auto& j : i) collision_matrix2.push_back(j, true); }
+	collision_matrix2.push_back(foreground_block, true);
+	collision_matrix2.push_back(bird_block, [&](collisionable_sprite* s) {
+		s->set_run_on_collision([&](collisionable_base* b) {
+			if (is_running) {
+				is_running = false;
+				index_ahead = 0;
 			}
 		});
-
-		collision_matrix.push_back(std::move(col));
-	}
+	});
 	// do not touch collision_matrix for now on
 
 	collision_detector.task_async([&] {
 		
-		work_all_auto(collision_matrix.data(), collision_matrix.data() + collision_matrix.size());
+		collision_matrix2.think_all();
+		for (auto& i : pipes) { // not in collision
+			for (auto& k : i) {
+				k.think();
+			}
+		}
 
-	}, thread::speed::INTERVAL, 1.0/10);
+	}, thread::speed::INTERVAL, 1.0/24);
 	
 
 	logging("MAIN", "Started.");

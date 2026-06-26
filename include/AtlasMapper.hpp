@@ -1,6 +1,8 @@
 #pragma once
 
 #include <unordered_map>
+ 
+#include <battery/embed.hpp>
 
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_image.h>

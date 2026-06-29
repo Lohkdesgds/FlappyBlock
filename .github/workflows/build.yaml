@@ -1,0 +1,36 @@
+name: Build
+
+on:
+    workflow_dispatch:
+
+jobs:
+    build:
+        strategy:
+            matrix:
+                os: [ windows-latest, ubuntu-latest ]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v7
+            
+            - name: Install Allegro 5 (Linux)
+              if: matrix.os == 'ubuntu-latest'
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y liballegro5-dev
+
+            - name: Install Allegro 5 (Windows)
+              if: matrix.os == 'windows-latest'
+              run: |
+                vcpkg install allegro5:x64-windows
+
+            - name: Build Project
+              uses: threeal/cmake-action@v2.1.0
+              with:
+                options: |
+                  ${{ matrix.os == 'windows-latest' && 'CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake' || '' }}
+            
+            - name: Upload build
+              uses: actions/upload-artifact@v7
+              with:
+                name: UPLOAD_${{ matrix.os }}
+                path: build

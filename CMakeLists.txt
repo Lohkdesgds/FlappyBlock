@@ -72,7 +72,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Release>:-O3>
 )
 
-b_embed(core resources/icon_src.ico)
+b_embed(core resources/icon.png)
 b_embed(core resources/atlas.png)
 
 # ===== Enable testing ===== #

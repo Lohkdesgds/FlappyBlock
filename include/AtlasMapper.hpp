@@ -20,11 +20,15 @@ public:
         SIGN_GAME_OVER,
     };
 
-    ALLEGRO_BITMAP* get(BITMAPS);
+    ALLEGRO_BITMAP* get(BITMAPS) const;
+    ALLEGRO_BITMAP* get_icon() const;
 private:
     const b::EmbedInternal::EmbeddedFile& m_atlas;
+    const b::EmbedInternal::EmbeddedFile& m_icon_src;
     ALLEGRO_BITMAP* m_main = nullptr;
+    ALLEGRO_BITMAP* m_icon = nullptr;
     ALLEGRO_FILE* m_fp = nullptr;
+    ALLEGRO_FILE* m_icon_fp = nullptr;
     
     std::unordered_map<BITMAPS, ALLEGRO_BITMAP*> m_map;
 public:

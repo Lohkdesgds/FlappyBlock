@@ -11,17 +11,41 @@ jobs:
         runs-on: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@v7
+              with:
+                submodules: recursive
+                token: ${{ secrets.DISCORD_SDK_PAT }}
+
+            - name: Setup 7-Zip
+              uses: milliewalky/setup-7-zip@v2
             
-            - name: Install Allegro 5 (Linux)
+            - name: Setup Linux dependencies and resources
               if: matrix.os == 'ubuntu-latest'
+              shell: bash
               run: |
+                # Setup Allegro, setup resource, and unzip dependency
+
                 sudo apt-get update
                 sudo apt-get install -y liballegro5-dev
 
-            - name: Install Allegro 5 (Windows)
+                mkdir -p resources
+                echo "${{ secrets.DISCORD_APP_CLIENT_ID }}" > resources/discord_app_id.txt
+
+                chmod +x ./unzip_sdk.sh
+                ./unzip_sdk.sh
+
+            - name: Setup Windows dependencies and resources
               if: matrix.os == 'windows-latest'
+              shell: pwsh
               run: |
+                # Setup Allegro, setup resource, and unzip dependency
+
                 vcpkg install allegro5:x64-windows
+
+                New-Item -ItemType Directory -Force -Path resources
+                "${{ secrets.DISCORD_APP_CLIENT_ID }}" > resources/discord_app_id.txt
+
+                ./unzip_sdk.ps1
+
 
             - name: Build Project
               uses: threeal/cmake-action@v2.1.0
@@ -33,4 +57,4 @@ jobs:
               uses: actions/upload-artifact@v7
               with:
                 name: UPLOAD_${{ matrix.os }}
-                path: build
+                path: build/bin/executable

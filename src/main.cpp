@@ -5,6 +5,7 @@
 
 #include "AtlasMapper.hpp"
 #include "OSD.hpp"
+#include "DiscordSDK.hpp"
 
 constexpr int default_screen_size[] = {720, 1280};
 constexpr int pixeled_screen_size[] = {144, 256};
@@ -13,6 +14,8 @@ void refresh_transform(ALLEGRO_DISPLAY* dp);
 Atlas::BITMAPS get_random_bg();
 
 int main() {
+    DiscordManager discord;
+
     al_init();
     al_init_font_addon();
     al_init_image_addon();

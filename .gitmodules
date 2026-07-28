@@ -1,0 +1,3 @@
+[submodule "deps/discord-sdk"]
+	path = deps/discord-sdk
+	url = https://github.com/Lohkdesgds/discord-sdk

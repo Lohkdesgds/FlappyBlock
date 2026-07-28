@@ -28,6 +28,7 @@ endif()
 
 include(cmake/installBatteryEmbed.cmake)
 include(cmake/installAllegro.cmake)
+include(cmake/setupDiscord.cmake)
 
 
 # ===== Shared core code ===== #
@@ -46,9 +47,17 @@ target_include_directories(core PUBLIC
     ${ALLEGRO_INCLUDE_DIRS}
     ${PROJECT_ROOT_DIR}/include
 )
+target_include_directories(core PRIVATE 
+    ${DISCORD_SDK_INCLUDE_DIR}
+)
+
 
 target_link_libraries(core PUBLIC
     ${ALLEGRO_LIBRARIES}
+)
+
+target_link_libraries(core PRIVATE
+    ${DISCORD_LIB_PATH}
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
@@ -64,6 +73,10 @@ add_executable(${PROJECT_NAME}
     "${PROJECT_ROOT_DIR}/src/main.cpp"
 )
 
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/executable"
+)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     core
 )
@@ -74,6 +87,10 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 b_embed(core resources/icon.png)
 b_embed(core resources/atlas.png)
+b_embed(core resources/discord_app_id.txt)
+
+
+include(cmake/integrateDiscord.cmake)
 
 # ===== Enable testing ===== #
 

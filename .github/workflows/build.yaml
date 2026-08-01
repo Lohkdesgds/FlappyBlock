@@ -25,6 +25,14 @@ jobs:
               shell: bash
               run: |
                 # Setup dependencies
+                sudo apt update
+                sudo apt install -y libasound2-dev libpulse-dev libaudio-dev \
+                  libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev \
+                  libxcursor-dev libxi-dev libxinerama-dev libxss-dev libgl1-mesa-dev \
+                  libdbus-1-dev libvulkan-dev libwayland-dev libxkbcommon-dev \
+                  libegl1-mesa-dev libibus-1.0-dev libusb-1.0-0-dev libxtst-dev \
+                  libfreetype6-dev libharfbuzz-dev libpng-dev libwebp-dev \
+                  libtiff-dev libjpeg-dev
 
                 mkdir -p resources
                 echo "${{ secrets.DISCORD_APP_CLIENT_ID }}" > resources/discord_app_id.txt

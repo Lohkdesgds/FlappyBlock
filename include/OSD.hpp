@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <allegro5/allegro.h>
+/*#include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
 
 class OSD {
@@ -18,4 +18,4 @@ public:
     OSD(const OSD&) = delete;
     void operator=(OSD&&) = delete;
     void operator=(const OSD&) = delete;
-};
+};*/

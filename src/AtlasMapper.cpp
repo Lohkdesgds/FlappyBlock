@@ -1,29 +1,42 @@
 #include "AtlasMapper.hpp"
+#include <SDL3_image/SDL_image.h>
 
-ALLEGRO_BITMAP* Atlas::get(BITMAPS opt) const {
+SDL_FRect Atlas::get_rect(BITMAPS opt) const {
     auto it = m_map.find(opt);
     if (it != m_map.end()) return it->second;
-    return nullptr;
+    return {0.0f, 0.0f, 0.0f, 0.0f};
 }
 
-ALLEGRO_BITMAP* Atlas::get_icon() const {
+SDL_Texture* Atlas::get_texture() const {
+    return m_main;
+}
+
+SDL_Surface* Atlas::get_icon() const {
     return m_icon;
 }
 
-Atlas::Atlas() :
+Atlas::Atlas(SDL_Renderer* renderer) :
     m_atlas(b::embed<"resources/atlas.png">()),
-    m_icon_src(b::embed<"resources/icon.png">()),
-    m_fp(al_open_memfile((void*)m_atlas.data(), m_atlas.size(), "rb")),
-    m_icon_fp(al_open_memfile((void*)m_icon_src.data(), m_icon_src.size(), "rb"))
+    m_icon_src(b::embed<"resources/icon.png">())
 {
-    m_main = al_load_bitmap_f(m_fp, ".png");
-    m_icon = al_load_bitmap_f(m_icon_fp, ".png");
+    // Load Icon to a CPU Surface
+    SDL_IOStream* icon_io = SDL_IOFromConstMem(m_icon_src.data(), m_icon_src.size());
+    m_icon = IMG_Load_IO(icon_io, true); // true = auto-close IO stream
 
-    m_map[BITMAPS::BG_LIGHT] = al_create_sub_bitmap(m_main, 0, 0, 144, 256);
-    m_map[BITMAPS::BG_DARK] = al_create_sub_bitmap(m_main, 146, 0, 144, 256);
+    // Load Atlas to a Hardware Texture
+    SDL_IOStream* atlas_io = SDL_IOFromConstMem(m_atlas.data(), m_atlas.size());
+    SDL_Surface* atlas_surf = IMG_Load_IO(atlas_io, true);
+    if (atlas_surf) {
+        m_main = SDL_CreateTextureFromSurface(renderer, atlas_surf);
+        SDL_DestroySurface(atlas_surf); // Free the CPU surface now that it's on the GPU
+    }
+
+    // Map sub-rectangles (x, y, w, h)
+    m_map[BITMAPS::BG_LIGHT] = {0.0f, 0.0f, 144.0f, 256.0f};
+    m_map[BITMAPS::BG_DARK]  = {146.0f, 0.0f, 144.0f, 256.0f};
 }
 
 Atlas::~Atlas() {
-    al_destroy_bitmap(m_main);
-    al_fclose(m_fp);
+    if (m_main) SDL_DestroyTexture(m_main);
+    if (m_icon) SDL_DestroySurface(m_icon);
 }

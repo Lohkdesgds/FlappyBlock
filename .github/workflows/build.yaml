@@ -6,8 +6,10 @@ on:
 jobs:
     build:
         strategy:
+            fail-fast: false
+            max-parallel: 1
             matrix:
-                os: [ windows-latest, ubuntu-latest ]
+                os: [ubuntu-latest, windows-latest, macos-latest]
         runs-on: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@v7
@@ -22,10 +24,14 @@ jobs:
               if: matrix.os == 'ubuntu-latest'
               shell: bash
               run: |
-                # Setup Allegro, setup resource, and unzip dependency
+                # Setup dependencies
 
-                sudo apt-get update
-                sudo apt-get install -y liballegro5-dev
+                sudo apt update
+                sudo apt install -y libasound2-dev libpulse-dev libaudio-dev \
+                  libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev \
+                  libxcursor-dev libxi-dev libxinerama-dev libxss-dev libgl1-mesa-dev \
+                  libdbus-1-dev libvulkan-dev libwayland-dev libxkbcommon-dev \
+                  libegl1-mesa-dev libibus-1.0-dev libusb-1.0-0-dev libxtst-dev
 
                 mkdir -p resources
                 echo "${{ secrets.DISCORD_APP_CLIENT_ID }}" > resources/discord_app_id.txt
@@ -37,9 +43,7 @@ jobs:
               if: matrix.os == 'windows-latest'
               shell: pwsh
               run: |
-                # Setup Allegro, setup resource, and unzip dependency
-
-                vcpkg install allegro5:x64-windows
+                # Setup dependencies
 
                 New-Item -ItemType Directory -Force -Path resources
                 "${{ secrets.DISCORD_APP_CLIENT_ID }}" > resources/discord_app_id.txt
@@ -49,9 +53,6 @@ jobs:
 
             - name: Build Project
               uses: threeal/cmake-action@v2.1.0
-              with:
-                options: |
-                  ${{ matrix.os == 'windows-latest' && 'CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake' || '' }}
             
             - name: Upload build
               uses: actions/upload-artifact@v7

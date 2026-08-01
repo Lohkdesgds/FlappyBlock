@@ -4,9 +4,7 @@
  
 #include <battery/embed.hpp>
 
-#include <allegro5/allegro.h>
-#include <allegro5/allegro_image.h>
-#include <allegro5/allegro_memfile.h>
+#include <SDL3/SDL.h>
 
 class Atlas {
 public:
@@ -20,19 +18,22 @@ public:
         SIGN_GAME_OVER,
     };
 
-    ALLEGRO_BITMAP* get(BITMAPS) const;
-    ALLEGRO_BITMAP* get_icon() const;
+    // In SDL3, atlases are best handled by returning the source rectangle
+    SDL_FRect get_rect(BITMAPS) const;
+    SDL_Texture* get_texture() const;
+    SDL_Surface* get_icon() const;
+
 private:
     const b::EmbedInternal::EmbeddedFile& m_atlas;
     const b::EmbedInternal::EmbeddedFile& m_icon_src;
-    ALLEGRO_BITMAP* m_main = nullptr;
-    ALLEGRO_BITMAP* m_icon = nullptr;
-    ALLEGRO_FILE* m_fp = nullptr;
-    ALLEGRO_FILE* m_icon_fp = nullptr;
     
-    std::unordered_map<BITMAPS, ALLEGRO_BITMAP*> m_map;
+    SDL_Texture* m_main = nullptr;
+    SDL_Surface* m_icon = nullptr;
+    
+    std::unordered_map<BITMAPS, SDL_FRect> m_map;
 public:
-    Atlas();
+    // SDL requires the renderer to create hardware textures
+    Atlas(SDL_Renderer* renderer);
     ~Atlas();
 
     Atlas(Atlas&&) = delete;

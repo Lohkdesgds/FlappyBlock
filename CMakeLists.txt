@@ -3,12 +3,13 @@ cmake_minimum_required(VERSION 3.28)
 
 project(FlappyBlock
     VERSION 1.0
-    DESCRIPTION "FlappyBlock is a copy of a popular game made in C/C++ with Allegro 5"
+    DESCRIPTION "FlappyBlock is a copy of a popular game made in C/C++ with SDL3"
     LANGUAGES CXX
 )
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(PROJECT_ROOT_DIR "${CMAKE_SOURCE_DIR}")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -DUNICODE -D_UNICODE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUNICODE -D_UNICODE")
@@ -27,7 +28,7 @@ if (MINGW)
 endif()
 
 include(cmake/installBatteryEmbed.cmake)
-include(cmake/installAllegro.cmake)
+include(cmake/installSDL3.cmake)
 include(cmake/setupDiscord.cmake)
 
 
@@ -44,7 +45,6 @@ list(REMOVE_ITEM CORE_SOURCES
 add_library(core STATIC ${CORE_SOURCES})
 
 target_include_directories(core PUBLIC 
-    ${ALLEGRO_INCLUDE_DIRS}
     ${PROJECT_ROOT_DIR}/include
 )
 target_include_directories(core PRIVATE 
@@ -53,7 +53,7 @@ target_include_directories(core PRIVATE
 
 
 target_link_libraries(core PUBLIC
-    ${ALLEGRO_LIBRARIES}
+    SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf
 )
 
 target_link_libraries(core PRIVATE

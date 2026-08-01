@@ -1,7 +1,10 @@
 #include <utility>
+#include <string>
+#include <cstdlib>
 
-#include <allegro5/allegro.h>
-#include <allegro5/allegro_font.h>
+#include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
+// Note: If your OSD class uses fonts, you will likely need #include <SDL3_ttf/SDL_ttf.h>
 
 #include "AtlasMapper.hpp"
 #include "OSD.hpp"
@@ -10,102 +13,93 @@
 constexpr int default_screen_size[] = {720, 1280};
 constexpr int pixeled_screen_size[] = {144, 256};
 
-void refresh_transform(ALLEGRO_DISPLAY* dp);
 Atlas::BITMAPS get_random_bg();
 
-int main() {
+int main(int argc, char* argv[]) {
     DiscordManager discord;
 
-    al_init();
-    al_init_font_addon();
-    al_init_image_addon();
-    
-    al_install_keyboard();
-    al_install_mouse();
+    // Initialize SDL3 (Video automatically includes Events)
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+        return -1;
+    }
 
-    al_set_new_display_flags(ALLEGRO_OPENGL | ALLEGRO_RESIZABLE);
-    al_set_new_display_option(ALLEGRO_VSYNC, 2, ALLEGRO_SUGGEST);
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
 
-    ALLEGRO_DISPLAY* dp = al_create_display(default_screen_size[0], default_screen_size[1]);
-    ALLEGRO_EVENT_QUEUE* ev_qu = al_create_event_queue();
+    // Create window and renderer simultaneously (replaces al_create_display)
+    if (!SDL_CreateWindowAndRenderer("Flappy Block", 
+                                     default_screen_size[0], 
+                                     default_screen_size[1], 
+                                     SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL, 
+                                     &window, &renderer)) {
+        return -1;
+    }
+
+    // 1 = Standard VSync
+    SDL_SetRenderVSync(renderer, 1); 
+
+    // This completely replaces `refresh_transform()`. 
+    // SDL handles all the scaling math automatically, even when resizing!
+    SDL_SetRenderLogicalPresentation(renderer, 
+                                     pixeled_screen_size[0], 
+                                     pixeled_screen_size[1], 
+                                     SDL_LOGICAL_PRESENTATION_STRETCH);
+
+    //OSD osd; 
+    // Note: You will likely need to pass `renderer` to your OSD class so it can draw text
     
-    OSD osd;
-    Atlas atlas;
+    Atlas atlas(renderer);
     Atlas::BITMAPS bg = get_random_bg();
 
-    al_set_app_name("Flappy Block");
-    al_set_display_icon(dp, atlas.get_icon());
+    if (atlas.get_icon()) {
+        SDL_SetWindowIcon(window, atlas.get_icon());
+    }
 
     double frametime_smooth = 0.0;
+    
+    // SDL_GetTicksNS returns nanoseconds. Dividing by 1e9 gives double seconds (same as al_get_time)
+    auto ft_now = SDL_GetTicksNS() / 1e9; 
 
-    al_register_event_source(ev_qu, al_get_display_event_source(dp));
-    al_register_event_source(ev_qu, al_get_keyboard_event_source());
-    al_register_event_source(ev_qu, al_get_mouse_event_source());
-
-    bool must_resize = true;
-    auto ft_now = al_get_time();
-
-    for(bool running = true; running;) {
-        if (must_resize) {
-            must_resize = false;
-            al_acknowledge_resize(dp);
-            refresh_transform(dp);
-            bg = get_random_bg();
-        }
-
-        ALLEGRO_EVENT ev;
-        while(running && al_get_next_event(ev_qu, &ev)) {
-            switch(ev.type) {
-            case ALLEGRO_EVENT_DISPLAY_CLOSE:
+    bool running = true;
+    while (running) {
+        SDL_Event ev;
+        while (SDL_PollEvent(&ev)) {
+            switch (ev.type) {
+            case SDL_EVENT_QUIT:
                 running = false;
                 break;
-            case ALLEGRO_EVENT_DISPLAY_RESIZE:
-                must_resize = true;
-                break;
-            case ALLEGRO_EVENT_KEY_UP:
-            {
-                switch (ev.keyboard.keycode)
-                {
-                case ALLEGRO_KEY_R:
+            // No need for a WINDOW_RESIZED event handler because SDL_LOGICAL_PRESENTATION_STRETCH handles it!
+            case SDL_EVENT_KEY_UP:
+                if (ev.key.key == SDLK_R) {
                     bg = get_random_bg();
-                    break;
-                default:
-                    break;
                 }
-            }
                 break;
             }
         }
 
-        auto ft_later = al_get_time();
+        auto ft_later = SDL_GetTicksNS() / 1e9;
         const auto delta = ft_later - std::exchange(ft_now, ft_later);
         frametime_smooth = ((frametime_smooth * 9.0) + delta) / 10.0;
 
-        al_draw_bitmap(atlas.get(bg), 0, 0, 0);
+        // --- Rendering Phase ---
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer); // Clears the screen
 
-        osd.show(std::to_string(frametime_smooth) + " ms\n" + std::to_string(1.0 / (frametime_smooth == 0.0 ? 1e-12 : frametime_smooth)) + " FPS");
-        al_flip_display();
+        // Draw the background
+        SDL_FRect src_rect = atlas.get_rect(bg);
+        SDL_FRect dst_rect = {0.0f, 0.0f, src_rect.w, src_rect.h};
+        SDL_RenderTexture(renderer, atlas.get_texture(), &src_rect, &dst_rect);
+
+        //osd.show(std::to_string(frametime_smooth) + " ms\n" + std::to_string(1.0 / (frametime_smooth == 0.0 ? 1e-12 : frametime_smooth)) + " FPS");
+        
+        SDL_RenderPresent(renderer); // Flips the display
     }
 
-    al_destroy_display(dp);
-    al_destroy_event_queue(ev_qu);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
-}
-
-void refresh_transform(ALLEGRO_DISPLAY* dp)
-{
-    //ALLEGRO_DISPLAY* dp = al_get_current_display();
-    ALLEGRO_TRANSFORM tf;
-
-    al_identity_transform(&tf);
-    al_scale_transform(&tf,
-        al_get_display_width(dp) * 1.0f / pixeled_screen_size[0],
-        al_get_display_height(dp) * 1.0f / pixeled_screen_size[1]);
-
-    al_use_transform(&tf);
-
-    //al_use_transform();
 }
 
 Atlas::BITMAPS get_random_bg()

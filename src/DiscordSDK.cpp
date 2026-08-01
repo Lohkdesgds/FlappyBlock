@@ -6,6 +6,7 @@
 #include <battery/embed.hpp>
 
 #include <iostream>
+#include <fstream>
 
 struct DiscordManager::DiscordData{
     std::shared_ptr<discordpp::Client> m_client;
@@ -14,24 +15,20 @@ struct DiscordManager::DiscordData{
 DiscordManager::DiscordManager() 
     : m_discord(std::make_unique<DiscordData>())
 {
+    constexpr char discord_lib_file[] = DISCORD_LIB_FILE;
+
+    const auto discord_lib = b::embed<DISCORD_LIB_NAME>();
+    
+    const std::string discord_lib_data = discord_lib.str();
+    std::fstream out(discord_lib_file, std::ios::out | std::ios::binary);
+    out.write(discord_lib_data.data(), discord_lib_data.size());
+    out.flush();
+    out.close();
+
     const auto embed_id = b::embed<"resources/discord_app_id.txt">();
     const uint64_t embed_id_uint64 = std::stoull(embed_id.str());
 
     m_discord->m_client = std::make_shared<discordpp::Client>();
-
-//    m_discord->m_client->AddLogCallback([](auto message, auto severity) {
-//        std::cout << "[" << EnumToString(severity) << "] " << message << std::endl;
-//    }, discordpp::LoggingSeverity::Info);
-//
-//    m_discord->m_client->SetStatusChangedCallback([client = m_discord->m_client](discordpp::Client::Status status, discordpp::Client::Error error, int32_t errorDetail) {
-//        std::cout << "🔄 Status changed: " << discordpp::Client::StatusToString(status) << std::endl;
-//
-//        if (status == discordpp::Client::Status::Ready) {
-//            std::cout << "✅ Client is ready! You can now call SDK functions.\n";
-//        } else if (error != discordpp::Client::Error::None) {
-//            std::cerr << "❌ Connection Error: " << discordpp::Client::ErrorToString(error) << " - Details: " << errorDetail << std::endl;
-//        }
-//    });
 
     m_discord->m_client->SetApplicationId(embed_id_uint64);
 

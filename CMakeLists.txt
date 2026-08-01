@@ -50,6 +50,10 @@ target_include_directories(core PUBLIC
 target_include_directories(core PRIVATE 
     ${DISCORD_SDK_INCLUDE_DIR}
 )
+target_compile_definitions(core PRIVATE
+    DISCORD_LIB_NAME="${DISCORD_SHARED_LIB_RELATIVE}"
+    DISCORD_LIB_FILE="${DISCORD_SHARED_LIB_NAME}"
+)
 
 
 target_link_libraries(core PUBLIC
@@ -88,6 +92,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 b_embed(core resources/icon.png)
 b_embed(core resources/atlas.png)
 b_embed(core resources/discord_app_id.txt)
+b_embed(core "${DISCORD_SHARED_LIB_RELATIVE}")
 
 
 include(cmake/integrateDiscord.cmake)

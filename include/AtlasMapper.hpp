@@ -5,6 +5,7 @@
 #include <battery/embed.hpp>
 
 #include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 class Atlas {
 public:
@@ -22,13 +23,20 @@ public:
     SDL_FRect get_rect(BITMAPS) const;
     SDL_Texture* get_texture() const;
     SDL_Surface* get_icon() const;
+    TTF_Font* get_font() const;
+
+    void draw_text(const std::string&, SDL_Renderer* renderer, const float, float) const;
 
 private:
+    void draw_single_line_text(const std::string_view&, SDL_Renderer* renderer, const float, const float) const;
+
     const b::EmbedInternal::EmbeddedFile& m_atlas;
     const b::EmbedInternal::EmbeddedFile& m_icon_src;
+    const b::EmbedInternal::EmbeddedFile& m_ttf_src;
     
+    TTF_Font* m_font = nullptr;
     SDL_Texture* m_main = nullptr;
-    SDL_Surface* m_icon = nullptr;
+    SDL_Surface* m_icon = nullptr;    
     
     std::unordered_map<BITMAPS, SDL_FRect> m_map;
 public:

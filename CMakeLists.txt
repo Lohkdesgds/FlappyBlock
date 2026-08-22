@@ -91,6 +91,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 b_embed(core resources/icon.png)
 b_embed(core resources/atlas.png)
+b_embed(core resources/Artifika_font.ttf)
 b_embed(core resources/discord_app_id.txt)
 b_embed(core "${DISCORD_SHARED_LIB_RELATIVE}")
 

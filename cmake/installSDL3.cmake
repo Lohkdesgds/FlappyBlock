@@ -1,22 +1,26 @@
 include(FetchContent)
 
 message(STATUS "Declaring SDL3 and dependencies...")
+
+# Declare SDL3
 FetchContent_Declare(
   SDL3
   GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-  GIT_TAG        main
+  GIT_TAG        release-3.4.14
 )
 
+# Declare SDL3_image with explicit cleanup handling
 FetchContent_Declare(
     SDL3_image
     GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-    GIT_TAG        main # Or match the specific preview tag you used for SDL3 (e.g., preview-3.1.3)
+    GIT_TAG        release-3.4.4
 )
 
+# Declare SDL3_ttf
 FetchContent_Declare(
     SDL3_ttf
     GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
-    GIT_TAG        main 
+    GIT_TAG        release-3.2.2 
 )
 
 message(STATUS "Setting SDL3 flags...")
